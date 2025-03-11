@@ -351,7 +351,7 @@ def main():
     initial_state = create_initial_state(n_squares)
     # Animate the game states with a slider for 30 turns
     # Default is to use opacity for visualization
-    animate_game_states(transition_matrix, initial_state, max_turns=30, use_opacity=False)
+    animate_game_states(transition_matrix, initial_state, max_turns=100, use_opacity=False)
 
 if __name__ == "__main__":
     main()
