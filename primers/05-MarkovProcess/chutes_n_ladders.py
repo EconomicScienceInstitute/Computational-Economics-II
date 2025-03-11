@@ -39,7 +39,16 @@ def add_chutes_ladders(transition_matrix: np.matrix, chutes_ladders: dict) -> np
         np.matrix: Transition matrix with chutes and ladders
     """
     for start, end in chutes_ladders.items():
-        transition_matrix[start, end] = 1
+        # When you land on 'start', you immediately go to 'end'
+        # So we need to redirect all transitions that would lead to 'start'
+        # to instead lead to 'end'
+        for i in range(transition_matrix.shape[0]):
+            # If there's a probability to move from square i to start
+            if transition_matrix[i, start] > 0:
+                # Add that probability to moving from i to end instead
+                transition_matrix[i, end] += transition_matrix[i, start]
+                # Remove the probability of moving from i to start
+                transition_matrix[i, start] = 0
     return transition_matrix
 
 def make_transition_matrix(n_squares: int) -> np.matrix :
@@ -92,7 +101,7 @@ def find_nth_turn(transition_matrix: np.matrix, initial_state: np.matrix, n_turn
     """
     return np.linalg.matrix_power(transition_matrix.T, n_turns) * initial_state.T
 
-def visualize_nth_turn(transition_matrix: np.matrix, initial_state: np.matrix, n_turns: int) -> None:
+def visualize_nth_turn(transition_matrix: np.matrix, initial_state: np.matrix, n_turns: int, use_opacity: bool = True) -> None:
     """Visualize the state of the game after n
     turns by plotting the state as a heatmap resembling the board
 
@@ -100,6 +109,7 @@ def visualize_nth_turn(transition_matrix: np.matrix, initial_state: np.matrix, n
         transition_matrix (np.matrix): Transition matrix
         initial_state (np.matrix): Initial state
         n_turns (int): Number of turns
+        use_opacity (bool, optional): If True, use opacity for visualization. If False, use color. Defaults to True.
     """
     import plotly.graph_objects as go
     
@@ -124,14 +134,26 @@ def visualize_nth_turn(transition_matrix: np.matrix, initial_state: np.matrix, n
                 square_labels[row, j] = str(square_num)
     
     # Create a heatmap with plotly
-    fig = go.Figure(data=go.Heatmap(
-        z=board,
-        text=square_labels,
-        texttemplate="%{text}",
-        colorscale="Blues",
-        showscale=True,
-        colorbar=dict(title="Probability")
-    ))
+    if use_opacity:
+        # Use a single color with varying opacity
+        fig = go.Figure(data=go.Heatmap(
+            z=board,
+            text=square_labels,
+            texttemplate="%{text}",
+            colorscale=[[0, 'rgba(0,0,255,0)'], [1, 'rgba(0,0,255,1)']],
+            showscale=True,
+            colorbar=dict(title="Probability")
+        ))
+    else:
+        # Use color gradient
+        fig = go.Figure(data=go.Heatmap(
+            z=board,
+            text=square_labels,
+            texttemplate="%{text}",
+            colorscale="Blues",
+            showscale=True,
+            colorbar=dict(title="Probability")
+        ))
     
     fig.update_layout(
         title=f'State after {n_turns} turns',
@@ -141,13 +163,14 @@ def visualize_nth_turn(transition_matrix: np.matrix, initial_state: np.matrix, n
     
     fig.show()
 
-def animate_game_states(transition_matrix: np.matrix, initial_state: np.matrix, max_turns: int = 20) -> None:
+def animate_game_states(transition_matrix: np.matrix, initial_state: np.matrix, max_turns: int = 20, use_opacity: bool = True) -> None:
     """Create an animated visualization of the game states with a slider for turn number
     
     Args:
         transition_matrix (np.matrix): Transition matrix
         initial_state (np.matrix): Initial state
         max_turns (int, optional): Maximum number of turns to animate. Defaults to 20.
+        use_opacity (bool, optional): If True, use opacity for visualization. If False, use color. Defaults to True.
     """
     import plotly.graph_objects as go
     
@@ -164,6 +187,9 @@ def animate_game_states(transition_matrix: np.matrix, initial_state: np.matrix, 
             for j in range(10):
                 square_num = (i + 1) * 10 - j
                 square_labels[row, j] = str(square_num)
+    
+    # Set colorscale based on visualization type
+    colorscale = [[0, 'rgba(0,0,255,0)'], [1, 'rgba(0,0,255,1)']] if use_opacity else "Blues"
     
     # Create frames for each turn
     frames = []
@@ -188,7 +214,7 @@ def animate_game_states(transition_matrix: np.matrix, initial_state: np.matrix, 
                     z=board,
                     text=square_labels,
                     texttemplate="%{text}",
-                    colorscale="Blues",
+                    colorscale=colorscale,
                     showscale=True,
                     colorbar=dict(title="Probability"),
                     zmin=0,
@@ -217,7 +243,7 @@ def animate_game_states(transition_matrix: np.matrix, initial_state: np.matrix, 
             z=initial_board,
             text=square_labels,
             texttemplate="%{text}",
-            colorscale="Blues",
+            colorscale=colorscale,
             showscale=True,
             colorbar=dict(title="Probability"),
             zmin=0,
@@ -324,7 +350,8 @@ def main():
     transition_matrix = make_transition_matrix(n_squares)
     initial_state = create_initial_state(n_squares)
     # Animate the game states with a slider for 30 turns
-    animate_game_states(transition_matrix, initial_state, max_turns=30)
+    # Default is to use opacity for visualization
+    animate_game_states(transition_matrix, initial_state, max_turns=30, use_opacity=False)
 
 if __name__ == "__main__":
     main()
